@@ -6,7 +6,7 @@ from user_settings import create_table, get_settings, settings_ex, delete_table,
 def input_num(max_num, prompt=None):
     while True:
         s = input(prompt)
-        if s.isdigit() and 1 <= int(s) <= max_num:
+        if s.isdigit() and 0 <= int(s) <= max_num:
             return s
         else:
             print(f'Необходимо ввести число от 1 до {max_num}')
@@ -23,10 +23,13 @@ def exact_coordinates(address, api_key, secret_key, language):
                 address_num = address_num + 1
                 values.append(i['value'])
                 print(f"{address_num} -> {i['value']}")
-
+            print(f"0 -> Нет нужного адреса")
             y = input_num(address_num, 'Введите номер подходящего адреса:\n>>')
             a = int(y)
-            result_clean = dadata.suggest("address", values[a - 1], language=language, count=1)
+            if a == 0:
+                return 1
+            else:
+                result_clean = dadata.suggest("address", values[a - 1], language=language, count=1)
             return result_clean[0]
         else:
             return result
@@ -59,7 +62,9 @@ def main(setting, setting_lung):
     while True:
         address = input('Введите адрес:\n>>')
         exact_coord = exact_coordinates(address, api_key, secret_key, language)
-        if exact_coord:
+        if exact_coord == 1:
+            print('Попробуйте уточнить запрос')
+        elif exact_coord:
             lat = exact_coord["data"]["geo_lat"]
             lon = exact_coord["data"]["geo_lon"]
             if lat and lon:
