@@ -40,7 +40,7 @@ def suggest(query, api_key, language, count=10,):
             delete_table()
             exit(0)
     else:
-        print('При запросе к сервису dadata произошла ошибка')
+        print(f'При запросе к сервису dadata произошла ошибка {res_status_code}')
         exit(1)
 
 
