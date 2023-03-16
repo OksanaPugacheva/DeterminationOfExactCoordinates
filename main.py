@@ -1,6 +1,11 @@
 import click
-from dadata import Dadata
 from user_settings import create_table, get_settings, settings_ex, delete_table, update_lung
+import re
+import json
+import requests
+
+
+BASE_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 
 
 def input_num(max_num, prompt=None):
@@ -9,17 +14,43 @@ def input_num(max_num, prompt=None):
         if s.isdigit() and 0 <= int(s) <= max_num:
             return s
         else:
-            print(f'Необходимо ввести число от 1 до {max_num}')
+            print(f'Необходимо ввести число от 0 до {max_num}')
 
 
-def exact_coordinates(address, api_key, secret_key, language):
+def suggest(query, api_key, language, count=10,):
+    url = BASE_URL
+    headers = {
+        'Authorization': 'Token ' + api_key,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    data = {
+        'query': query,
+        'count': count,
+        'language': language
+    }
+    res = requests.post(url, data=json.dumps(data), headers=headers)
+    res_status_code = res.status_code
+    if res_status_code == 200:
+        return res.json()
+    elif res_status_code == 403:
+        print('Несуществующий API-ключ или не подтверждена почта или исчерпан дневной лимит по количеству запросов')
+        print('Удалить существующий API-ключ? Введите "да", чтобы удалить')
+        if input('>>').lower() == 'да':
+            delete_table()
+            exit(0)
+    else:
+        print('При запросе к сервису dadata произошла ошибка')
+        exit(1)
+
+
+def exact_coordinates(address, api_key, language):
     try:
         values = []
-        dadata = Dadata(api_key, secret_key)
-        result = dadata.suggest("address", address, language=language)
+        result = suggest(address, api_key, language)
         address_num = 0
         if result:
-            for i in result:
+            for i in result['suggestions']:
                 address_num = address_num + 1
                 values.append(i['value'])
                 print(f"{address_num} -> {i['value']}")
@@ -29,8 +60,9 @@ def exact_coordinates(address, api_key, secret_key, language):
             if a == 0:
                 return 1
             else:
-                result_clean = dadata.suggest("address", values[a - 1], language=language, count=1)
-            return result_clean[0]
+                result_clean = suggest(values[a - 1], api_key, language, count=1)
+            return [result_clean['suggestions'][0]["value"], result_clean['suggestions'][0]['data']['geo_lat'],
+                    result_clean['suggestions'][0]['data']['geo_lon']]
         else:
             return result
     except Exception as e:
@@ -47,28 +79,33 @@ def main(setting, setting_lung):
     """
     if settings_ex() == 0 or setting == 0:
         delete_table()
-        api_key = input('Введите ключ api:\n>>')
-        secret_key = input('Введите секретный ключ:\n>>')
+        specific_char = re.compile(r'[^a-zA-Z0-9.]')
+        while True:
+            api_key = input('Введите ключ api:\n>>')
+            if specific_char.search(api_key) or len(api_key) == 0:
+                print("Api ключ может содержать только английские буквы и цифры, попробуйте снова")
+            else:
+                break
         language = input('Выберите язык ru или en:\n>>')
-        create_table(api_key, secret_key, language)
+        if language != 'ru' and language != 'en':
+            language = 'ru'
+        create_table(api_key, language)
     elif settings_ex() == 1 and (setting_lung == 'ru' or setting_lung == 'en'):
         update_lung(setting_lung)
 
     actual_setting = get_settings()
     api_key = actual_setting[0][0]
-    secret_key = actual_setting[0][1]
-    language = actual_setting[0][2]
+    language = actual_setting[0][1]
 
     while True:
         address = input('Введите адрес:\n>>')
-        exact_coord = exact_coordinates(address, api_key, secret_key, language)
+        exact_coord = exact_coordinates(address, api_key, language)
         if exact_coord == 1:
             print('Попробуйте уточнить запрос')
         elif exact_coord:
-            lat = exact_coord["data"]["geo_lat"]
-            lon = exact_coord["data"]["geo_lon"]
+            sd, lat, lon = exact_coord
             if lat and lon:
-                print(f'{exact_coord["value"]}: {lat} ш. {lon} д.')
+                print(f'{sd}: {lat} ш. {lon} д.')
             else:
                 print('Точные координаты места неизвестны')
         else:

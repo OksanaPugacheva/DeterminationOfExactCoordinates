@@ -1,16 +1,15 @@
 import sqlite3
 
 
-def create_table(secret_key, api_key, language):
+def create_table(api_key, language):
     sqlite_connection = sqlite3.connect("user_settings.db")
     cursor = sqlite_connection.cursor()
     cursor.execute("""CREATE TABLE IF NOT EXISTS settings
                     (id INTEGER,
                     api_key TEXT,
-                    secret_key TEXT, 
                     language TEXT)""")
-    values = (1, secret_key, api_key, language)
-    cursor.execute("""INSERT INTO settings (id, api_key, secret_key, language) VALUES (?, ?, ?, ?)""", values)
+    values = (1, api_key, language)
+    cursor.execute("""INSERT INTO settings (id, api_key, language) VALUES (?, ?, ?)""", values)
     sqlite_connection.commit()
     sqlite_connection.close()
 
@@ -18,7 +17,7 @@ def create_table(secret_key, api_key, language):
 def get_settings():
     sqlite_connection = sqlite3.connect("user_settings.db")
     cursor = sqlite_connection.cursor()
-    cursor.execute("SELECT api_key, secret_key, language FROM settings")
+    cursor.execute("SELECT api_key, language FROM settings")
     settings = cursor.fetchall()
     sqlite_connection.commit()
     sqlite_connection.close()
