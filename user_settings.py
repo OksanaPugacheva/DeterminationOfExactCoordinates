@@ -7,9 +7,10 @@ def create_table(api_key, language):
     cursor.execute("""CREATE TABLE IF NOT EXISTS settings
                     (id INTEGER,
                     api_key TEXT,
-                    language TEXT)""")
-    values = (1, api_key, language)
-    cursor.execute("""INSERT INTO settings (id, api_key, language) VALUES (?, ?, ?)""", values)
+                    language TEXT,
+                    url TEXT)""")
+    values = (1, api_key, language, 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address')
+    cursor.execute("""INSERT INTO settings (id, api_key, language, url) VALUES (?, ?, ?, ?)""", values)
     sqlite_connection.commit()
     sqlite_connection.close()
 
@@ -17,8 +18,8 @@ def create_table(api_key, language):
 def get_settings():
     sqlite_connection = sqlite3.connect("user_settings.db")
     cursor = sqlite_connection.cursor()
-    cursor.execute("SELECT api_key, language FROM settings")
-    settings = cursor.fetchall()
+    cursor.execute("SELECT api_key, language, url FROM settings")
+    settings = cursor.fetchone()
     sqlite_connection.commit()
     sqlite_connection.close()
     return settings
@@ -38,6 +39,14 @@ def update_lung(lung):
     sqlite_connection = sqlite3.connect("user_settings.db")
     cursor = sqlite_connection.cursor()
     cursor.execute("""UPDATE settings SET language=? WHERE id=?""", (lung, 1))
+    sqlite_connection.commit()
+    sqlite_connection.close()
+
+
+def update_api(api_key):
+    sqlite_connection = sqlite3.connect("user_settings.db")
+    cursor = sqlite_connection.cursor()
+    cursor.execute("""UPDATE settings SET api_key=? WHERE id=?""", (api_key, 1))
     sqlite_connection.commit()
     sqlite_connection.close()
 
